@@ -147,3 +147,80 @@ Delete from Personeller Where PersonelID = 54
 
 
 -- === Instead of Triggerlar === 
+-- Su ana kadar Insert, Update, Delete islemleri yapilirken su su islemleri yap mantigiyla calistik. (Bununla beraber sunu yap)
+-- Istead of Triggerlar ise Insert, Update ve Delete islemleri yerine su su islemleri yap mantigiyla calismaktadirlar. (Bunun yerine sunu yap)
+
+
+
+-- Prototip
+-- Create Trigger [Trigger Adi]
+-- on [Tablo Adi]
+-- Instead Of Delete, Update, Insert
+-- As
+-- [Komutlar]
+
+
+-- Ornek 5
+-- Personeller tablosunda update gerceklestigi anda yapilacak guncellestirme yerine bir log tablosuna
+-- "Adi ... olan personel .. yeni adiyla degistirilerek .. kullanici tarafindan ... tarihinde guncellenmek istendi."
+-- kalibinda rapor yazan triggeri yazalim.
+
+Create Trigger trgPersonellerRaporInstead
+on Personeller
+Instead Of Update
+As
+Declare @EskiAdi nvarchar(MAX), @YeniAdi nvarchar(MAX)
+Select @EskiAdi = Adi from deleted
+Select @YeniAdi = Adi from inserted
+Insert LogTablosu Values('Adi ' + @EskiAdi + ' olan personel ' + @YeniAdi + ' yeni adiyla degistirilerek ' + 
+	SUSER_NAME() + ' kullanici tarafindan ' + CAST(GETDATE() as nvarchar(MAX)) + ' tarihinde guncellenmek istendi.')
+
+
+Update Personeller Set Adi = 'Semih' Where PersonelID = 53
+Select * from LogTablosu
+
+
+-- Ornek 6
+-- Personeller tablosunda adi "Andrew" olan kaydin silinmesini engelleyen ama digerelerine izin veren trigger yazalim.
+Create Trigger AndrewTrigger
+on Personeller
+after Delete
+As
+Declare @Adi nvarchar(MAX)
+Select @Adi = Adi from deleted
+If @Adi = 'Andrew'
+	Begin
+		print 'Bu kayiti silemezsiniz.'
+		rollback -- Yapilan islemi geri alir
+	End
+		
+	
+Delete from Personeller Where PersonelId = 59
+
+
+
+
+
+
+
+-- === DDL Trigger ===
+-- Create, Alter, Drop islemleri sonucunda veya surecinde devreye girecek olan yapilardir.
+Create Trigger DDL_Trigger
+on Database
+For drop_table, alter_table, create_function, create_procedure, drop_procedure -- vs
+As
+print 'Bu islem gerceklestirilemez.'
+RollBack
+
+Drop Table LogTablosu
+
+-- Dikkat!!
+-- DDL Triggerlara ilgili veritabaninin Programmability -> Database Triggers sekmesi altindan erisebiliriz.
+
+
+
+-- === Triggeri devre disi birakma ===
+Disable Trigger OrnekTrigger on Personeller
+
+-- === Triggeri aktiflestirme ===
+Enable Trigger OrnekTrigger on Personeller
